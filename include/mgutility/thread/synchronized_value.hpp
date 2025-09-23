@@ -23,6 +23,7 @@
  */
 #ifndef __MGUTILITY_THREAD_SYNCHRONIZED_VALUE_HPP__
 #define __MGUTILITY_THREAD_SYNCHRONIZED_VALUE_HPP__
+
 #include <functional>
 #include <mutex>
 #include <tuple>
