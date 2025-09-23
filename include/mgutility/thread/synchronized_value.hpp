@@ -543,7 +543,7 @@ class synchronized_value {
      */
     auto operator=(const synchronized_value& other) -> synchronized_value& {
         if (this != &other) {
-            auto&& guard = synchronize(*this, other);
+            auto&& guard = mgutility::thread::synchronize(*this, other);
             *std::get<0>(guard) = *std::get<1>(guard);
         }
         return *this;
@@ -562,7 +562,7 @@ class synchronized_value {
     auto operator=(synchronized_value&& other) noexcept(
         std::is_nothrow_move_assignable<T>::value) -> synchronized_value& {
         if (this != &other) {
-            auto&& guard = synchronize(*this, other);
+            auto&& guard = mgutility::thread::synchronize(*this, other);
             *std::get<0>(guard) = std::move(*std::get<1>(guard));
         }
         return *this;
