@@ -7,7 +7,7 @@ A modern C++ thread-safe value wrapper with flexible locking strategies and conv
 - Encapsulates any value type `T` with internal mutex synchronization.
 - Supports customizable lock policies to use `std::unique_lock`, `std::shared_lock`, or user-defined lock types.
 - Provides read and write lock guards with transparent pointer-like and dereference semantics.
-- Callable interface supporting atomic access with lambdas.
+- Callable interface supporting thread-safe access with lambdas.
 - Customizable operator support for wrapped values via specialization of `operators` template.
 - Safe simultaneous locking of multiple `synchronized_value` instances without deadlock.
 
