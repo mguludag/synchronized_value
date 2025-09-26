@@ -532,6 +532,11 @@ class synchronized_value {
         : m_value{std::move(**other)} {}
 
     /**
+     * @brief Default destructor.
+     */
+    virtual ~synchronized_value() = default;
+
+    /**
      * @brief Copy assigns a new value to this object under mutual exclusion.
      * @param other Other synchronized_value to copy from.
      * @return Reference to *this.
