@@ -2,6 +2,8 @@
 
 A modern C++ thread-safe value wrapper with flexible locking strategies and convenient RAII guards.
 
+Inspired by Boost’s synchronized_value, CsLibGuarded, Folly’s Synchronized<T>, and the ongoing C++ standardization efforts to incorporate std::synchronized_value as outlined in P0290R4 and N4033.
+
 ## Features
 
 - Encapsulates any value type `T` with internal mutex synchronization.
