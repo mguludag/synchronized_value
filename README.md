@@ -16,7 +16,7 @@ A modern C++ thread-safe value wrapper with flexible locking strategies and conv
 - Compatible with **C++11** as a minimum.
 - If compiled with **C++17** or later, additional features such as `std::shared_mutex`, `std::shared_lock` are automatically enabled.
 
-## Usage
+## [Usage](https://godbolt.org/z/E147Tbx54)
 
 ```c++
 #include <mgutility/thread/synchronized_value.hpp>
@@ -55,6 +55,8 @@ You can customize which lock types are used for reading and writing by specializ
 Example - specialize for a custom shared mutex:
 
 ```c++
+#include <mgutility/thread/synchronized_value.hpp>
+
 struct MySharedMutex {
     void lock() { /* exclusive lock implementation */ }
     void unlock() { /* exclusive unlock */ }
@@ -82,6 +84,8 @@ The `operators<T>` template provides default equality and inequality operators t
 Example specialization for `std::filesystem::path` demonstrating custom comparison and path concatenation:
 
 ```c++
+#include <mgutility/thread/synchronized_value.hpp>
+#include <iostream>
 #include <filesystem>
 
 template <>
@@ -100,12 +104,17 @@ public:
         return !(*this == rhs);
     }
 
-    auto operator/(const std::filesystem::path& rhs) const -> std::filesystem::path& {
+    auto operator/(const std::filesystem::path& rhs) const -> std::filesystem::path {
         return value() / rhs;
     }
 
-    auto operator/(const std::string& rhs) const -> std::filesystem::path& {
-        return value() / rhs;
+    auto operator/=(const std::filesystem::path& rhs) -> std::filesystem::path& {
+        return (value() /= rhs);
+    }
+
+    friend auto operator<<(std::ostream& os, operators<std::filesystem::path>& val) -> std::ostream&
+    {
+        return os << val.value();
     }
 };
 
@@ -114,7 +123,8 @@ int main() {
 
     {
         auto&& path = sv.synchronize();
-        const auto binFolder = path / "bin";
+        path /= "bin";
+        std::cout << "bin folder: " << path << "\n"; // uses operator<< from user defined specialization
     }
 
 }
