@@ -41,6 +41,7 @@ int main() {
     {
         auto guard = sv.synchronize(/* [optional] additional args for guard object like std::adopt_lock_t{} etc. */);
         std::cout << "Read with lock: " << *guard << "\n";
+        guard = 50; // assign new value directly (same as *guard = 50)
     }
 }
 ```
@@ -61,17 +62,17 @@ struct MySharedMutex {
     void unlock_shared() { /* shared unlock */ }
 };
 
-namespace mgutility {
-namespace thread {
-
 template <>
-struct lock_policy<MySharedMutex> {
+struct mgutility::thread::lock_policy<MySharedMutex> {
     using read_lock = std::shared_lock<MySharedMutex>;
     using write_lock = std::unique_lock<MySharedMutex>;
 };
 
-} // namespace thread
-} // namespace mgutility
+int main() {
+    mgutility::thread::synchronized_value<int, MySharedMutex> sv(42);
+
+}
+
 ```
 
 ### Specializing `operators`
@@ -84,7 +85,7 @@ Example specialization for `std::filesystem::path` demonstrating custom comparis
 #include <filesystem>
 
 template <>
-class operators<std::filesystem::path> : public ref_wrapper<std::filesystem::path> {
+class mgutility::thread::operators<std::filesystem::path> : public ref_wrapper<std::filesystem::path> {
 public:
     using ref_wrapper<std::filesystem::path>::value;
 
@@ -99,10 +100,24 @@ public:
         return !(*this == rhs);
     }
 
-    auto operator/(const std::filesystem::path& rhs) const -> std::filesystem::path {
+    auto operator/(const std::filesystem::path& rhs) const -> std::filesystem::path& {
+        return value() / rhs;
+    }
+
+    auto operator/(const std::string& rhs) const -> std::filesystem::path& {
         return value() / rhs;
     }
 };
+
+int main() {
+    mgutility::thread::synchronized_value<std::filesystem::path> sv("/usr/local");
+
+    {
+        auto&& path = sv.synchronize();
+        const auto binFolder = path / "bin";
+    }
+
+}
 ```
 
 ## License
