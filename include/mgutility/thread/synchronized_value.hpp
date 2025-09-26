@@ -68,6 +68,49 @@ template <typename... Ts>
 using void_t = typename void_type<Ts...>::type;
 
 /**
+ * @brief Primary template: defers to T::operator() if callable
+ */
+template <typename T>
+struct function_traits : function_traits<decltype(&T::operator())> {};
+
+/**
+ * @brief Specialization for plain function pointers
+ * @tparam Ret Return type of the function
+ * @tparam Args Parameter pack of the function arguments
+ */
+template <typename Ret, typename... Args>
+struct function_traits<Ret (*)(Args...)> {
+    using return_type = Ret;                /**< The function's return type */
+    using args_tuple = std::tuple<Args...>; /**< A tuple of argument types */
+    static constexpr std::size_t nargs =
+        sizeof...(Args); /**< Number of arguments */
+};
+
+/**
+ * @brief Specialization for member function pointers (lambdas, functors)
+ * @tparam Ret Return type of the member function
+ * @tparam Class Class type that owns the function
+ * @tparam Args Parameter pack of the member function arguments
+ */
+template <typename Ret, typename Class, typename... Args>
+struct function_traits<Ret (Class::*)(Args...) const> {
+    using return_type = Ret;                /**< The function's return type */
+    using args_tuple = std::tuple<Args...>; /**< A tuple of argument types */
+    static constexpr std::size_t nargs =
+        sizeof...(Args); /**< Number of arguments */
+};
+
+/**
+ * @brief Alias to extract the N-th argument type of a callable
+ * @tparam F Callable type
+ * @tparam N Index (zero-based) of the argument
+ */
+template <typename F, std::size_t N>
+using argument_type_t =
+    typename std::tuple_element<N,
+                                typename function_traits<F>::args_tuple>::type;
+
+/**
  * @brief Checks if Callable is invocable with argument Arg.
  *
  * Evaluates to true if Callable can be called with Arg, otherwise false.
@@ -123,11 +166,11 @@ using invoke_result_t = typename std::result_of<F(ArgTypes...)>::type;
  * @brief SFINAE alias: enabled only if F is callable with Args..., yields
  * result type.
  * @tparam F Callable type.
- * @tparam Args Argument types.
+ * @tparam Arg Argument type.
  */
-template <typename F, typename... Args>
+template <typename F, typename Arg>
 using enable_callable_with_t =
-    enable_if_t<is_invocable<F, Args...>::value, invoke_result_t<F, Args...>>;
+    enable_if_t<std::is_same<argument_type_t<F, 0>, Arg>::value, invoke_result_t<F, Arg>>;
 
 }  // namespace detail
 
@@ -475,8 +518,8 @@ struct lock_policy {
 template <typename T, typename Lockable = std::mutex,
           template <typename...> class LockPolicy = lock_policy>
 class synchronized_value {
-    using read_lock_t = typename lock_policy<Lockable>::read_lock;
-    using write_lock_t = typename lock_policy<Lockable>::write_lock;
+    using read_lock_t = typename LockPolicy<Lockable>::read_lock;
+    using write_lock_t = typename LockPolicy<Lockable>::write_lock;
 
    public:
     using read_lock_guard_t = read_lock_guard<T, read_lock_t>;
