@@ -68,36 +68,47 @@ template <typename... Ts>
 using void_t = typename void_type<Ts...>::type;
 
 /**
- * @brief Checks if Callable is invocable with argument Arg.
- *
- * Evaluates to true if Callable can be called with Arg, otherwise false.
- * Useful for SFINAE enable_if constructs.
- *
- * @tparam Callable Callable type (lambda, function object).
- * @tparam Arg Argument type.
- *
- * @code
- * auto lambda = [](int x){ return x; };
- * static_assert(is_invocable<decltype(lambda), int>::value, "Callable with
- * int");
- * @endcode
+ * @brief Primary template: defers to T::operator() if callable
  */
-template <typename Callable, typename Arg, typename = void>
-struct is_invocable : std::false_type {};
-
-template <typename Callable, typename Arg>
-struct is_invocable<
-    Callable, Arg,
-    void_t<decltype(std::declval<Callable>()(std::declval<Arg>()))>>
-    : std::true_type {};
+template <typename T>
+struct function_traits : function_traits<decltype(&T::operator())> {};
 
 /**
- * @brief C++11 compatible enable_if alias template.
- * @tparam B Boolean condition.
- * @tparam T Type to enable on condition.
+ * @brief Specialization for plain function pointers
+ * @tparam Ret Return type of the function
+ * @tparam Args Parameter pack of the function arguments
  */
-template <bool B, typename T = void>
-using enable_if_t = typename std::enable_if<B, T>::type;
+template <typename Ret, typename... Args>
+struct function_traits<Ret (*)(Args...)> {
+    using return_type = Ret;                /**< The function's return type */
+    using args_tuple = std::tuple<Args...>; /**< A tuple of argument types */
+    static constexpr std::size_t nargs =
+        sizeof...(Args); /**< Number of arguments */
+};
+
+/**
+ * @brief Specialization for member function pointers (lambdas, functors)
+ * @tparam Ret Return type of the member function
+ * @tparam Class Class type that owns the function
+ * @tparam Args Parameter pack of the member function arguments
+ */
+template <typename Ret, typename Class, typename... Args>
+struct function_traits<Ret (Class::*)(Args...) const> {
+    using return_type = Ret;                /**< The function's return type */
+    using args_tuple = std::tuple<Args...>; /**< A tuple of argument types */
+    static constexpr std::size_t nargs =
+        sizeof...(Args); /**< Number of arguments */
+};
+
+/**
+ * @brief Alias to extract the N-th argument type of a callable
+ * @tparam F Callable type
+ * @tparam N Index (zero-based) of the argument
+ */
+template <typename F, std::size_t N>
+using argument_type_t =
+    typename std::tuple_element<N,
+                                typename function_traits<F>::args_tuple>::type;
 
 /**
  * @brief Deduce result type of invoking F with Args (cross-version).
@@ -118,16 +129,6 @@ using invoke_result_t = std::invoke_result_t<F, ArgTypes...>;
 template <typename F, typename... ArgTypes>
 using invoke_result_t = typename std::result_of<F(ArgTypes...)>::type;
 #endif
-
-/**
- * @brief SFINAE alias: enabled only if F is callable with Args..., yields
- * result type.
- * @tparam F Callable type.
- * @tparam Args Argument types.
- */
-template <typename F, typename... Args>
-using enable_callable_with_t =
-    enable_if_t<is_invocable<F, Args...>::value, invoke_result_t<F, Args...>>;
 
 }  // namespace detail
 
@@ -665,7 +666,9 @@ class synchronized_value {
      * @endcode
      */
     template <typename F>
-    auto operator()(F&& function) -> detail::enable_callable_with_t<F, T&> {
+    auto operator()(F&& function) -> detail::invoke_result_t<F, T&> {
+        static_assert(std::is_same<detail::argument_type_t<F, 0>, T&>::value,
+                      "Callable parameter must be T&");
         auto guard = write_lock_guard_t{m_value, m_lockable};
         return function(*guard);
     }
@@ -685,7 +688,10 @@ class synchronized_value {
      */
     template <typename F>
     auto operator()(F&& function) const
-        -> detail::enable_callable_with_t<F, const T&> {
+        -> detail::invoke_result_t<F, const T&> {
+        static_assert(
+            std::is_same<detail::argument_type_t<F, 0>, const T&>::value,
+            "Callable parameter must be const T&");
         const auto guard = read_lock_guard_t{m_value, m_lockable};
         return function(*guard);
     }
