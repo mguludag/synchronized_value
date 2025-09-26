@@ -7,6 +7,7 @@ A modern C++ thread-safe value wrapper with flexible locking strategies and conv
 - Encapsulates any value type `T` with internal mutex synchronization.
 - Supports customizable lock policies to use `std::unique_lock`, `std::shared_lock`, or user-defined lock types.
 - Provides read and write lock guards with transparent pointer-like and dereference semantics.
+- Automatically select read or write locks based on constness. (const -> read_lock, non-const -> write_lock)
 - Callable interface supporting thread-safe access with lambdas.
 - Customizable operator support for wrapped values via specialization of `operators` template.
 - Safe simultaneous locking of multiple `synchronized_value` instances without deadlock.
@@ -126,6 +127,14 @@ int main() {
         path /= "bin";
         std::cout << "bin folder: " << path << "\n"; // uses operator<< from user defined specialization
     }
+
+    // or...
+
+    mgutility::thread::synchronized_value<std::filesystem::path> sv_path("/usr/local");
+
+    std::cout << "bin folder: " << (*sv_path /= "bin") << "\n";
+
+   // or use operator() with lambda
 
 }
 ```
