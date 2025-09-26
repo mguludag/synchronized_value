@@ -14,7 +14,7 @@ A modern C++ thread-safe value wrapper with flexible locking strategies and conv
 ## C++ Version Compatibility
 
 - Compatible with **C++11** as a minimum.
-- If compiled with **C++17** or later, additional features such as `std::shared_mutex`, `std::shared_lock`, and `std::invoke_result_t` are automatically enabled.
+- If compiled with **C++17** or later, additional features such as `std::shared_mutex`, `std::shared_lock` are automatically enabled.
 
 ## Usage
 
