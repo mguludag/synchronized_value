@@ -589,7 +589,7 @@ class synchronized_value {
      * int x = sv.get(); // x becomes 42 safely
      * @endcode
      */
-    auto get() -> T const { return operator*().get(); }
+    auto get() const -> T { return operator*().get(); }
 
     /**
      * @brief Conversion operator to type T, providing thread-safe copy.
