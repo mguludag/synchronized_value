@@ -206,44 +206,6 @@ template <typename... SV,
 MGUTILITY_NODISCARD auto synchronize(SV&... sv) -> Ret;
 
 /**
- * @brief Reference wrapper providing mutable and const access via value().
- *
- * Wraps a reference to an object and exposes explicit getters.
- *
- * @tparam T Type of referenced object.
- *
- * @code
- * int x = 42;
- * ref_wrapper<int> rw(x);
- * int& ref = rw.value();
- * @endcode
- */
-template <typename T>
-class ref_wrapper : std::reference_wrapper<T> {
-   public:
-    /**
-     * @brief Constructor wrapping reference.
-     * @param obj Reference to wrap.
-     */
-    inline explicit ref_wrapper(T& obj) noexcept
-        : std::reference_wrapper<T>(obj) {}
-
-    /**
-     * @brief Get mutable reference.
-     * @return Mutable reference to wrapped object.
-     */
-    auto value() noexcept -> T& { return std::reference_wrapper<T>::get(); }
-
-    /**
-     * @brief Get const reference.
-     * @return Const reference to wrapped object.
-     */
-    auto value() const noexcept -> const T& {
-        return std::reference_wrapper<T>::get();
-    }
-};
-
-/**
  * @brief Base class providing default equality operators for wrapped reference
  * types.
  *
@@ -262,16 +224,17 @@ class ref_wrapper : std::reference_wrapper<T> {
  *
  * // Specializing operators for std::filesystem::path
  * template<>
- * class operators<std::filesystem::path> : public
- * ref_wrapper<std::filesystem::path> { public: using
- * ref_wrapper<std::filesystem::path>::value;
+ * class operators<std::filesystem::path> : std::reference_wrapper<std::filesystem::path> 
+ * { 
+ *   public:
+ *   using reference_wrapper<std::filesystem::path>::get;
  *
  *     explicit operators(std::filesystem::path& p) noexcept
- *         : ref_wrapper<std::filesystem::path>(p) {}
+ *         : std::reference_wrapper<std::filesystem::path>(p) {}
  *
  *     // Use filesystem's equivalent to compare paths semantically
  *     auto operator==(const std::filesystem::path& rhs) const -> bool {
- *         return std::filesystem::equivalent(value(), rhs);
+ *         return std::filesystem::equivalent(get(), rhs);
  *     }
  *
  *     auto operator!=(const std::filesystem::path& rhs) const -> bool {
@@ -280,7 +243,7 @@ class ref_wrapper : std::reference_wrapper<T> {
  *
  *     // Concatenate paths using operator/
  *     auto operator/(const std::filesystem::path& rhs) const ->
- * std::filesystem::path { return value() / rhs;
+ * std::filesystem::path { return get() / rhs;
  *     }
  * };
  *
@@ -300,25 +263,25 @@ class ref_wrapper : std::reference_wrapper<T> {
  * @tparam T The referenced type that operator comparisons operate on.
  */
 template <typename T>
-class operators : public ref_wrapper<T> {
+class operators : std::reference_wrapper<T> {
    public:
-    using ref_wrapper<T>::value;
+    using std::reference_wrapper<T>::get;
 
-    explicit operators(T& obj) noexcept : ref_wrapper<T>{obj} {}
+    explicit operators(T& obj) noexcept : std::reference_wrapper<T>{obj} {}
 
     /**
      * @brief Checks equality to another T.
      * @param rhs Other value for comparison.
      * @return true if equal.
      */
-    auto operator==(const T& rhs) const -> bool { return value() == rhs; }
+    auto operator==(const T& rhs) const -> bool { return get() == rhs; }
 
     /**
      * @brief Checks inequality to another T.
      * @param rhs Other value for comparison.
      * @return true if not equal.
      */
-    auto operator!=(const T& rhs) const -> bool { return value() != rhs; }
+    auto operator!=(const T& rhs) const -> bool { return get() != rhs; }
 };
 
 /**
@@ -363,29 +326,21 @@ class read_lock_guard : public Guard, public operators<T> {
      * @brief Move constructor.
      */
     read_lock_guard(read_lock_guard&& other) noexcept
-        : Guard{std::move(other)}, base_t{other.value()} {}
+        : Guard{std::move(other)}, base_t{other.get()} {}
 
     /**
      * @brief Const pointer-like access.
      */
     auto operator->() const -> const const_value_type* {
-        return &base_t::value();
+        return &base_t::get();
     }
 
     /**
      * @brief Const dereference.
      */
     MGUTILITY_NODISCARD auto operator*() const -> const const_value_type& {
-        return base_t::value();
+        return base_t::get();
     }
-
-    /**
-     * @brief Conversion operator to type T, providing thread-safe copy.
-     *
-     * Copies the guarded value under lock and returns it.
-     *
-     */
-    operator T() const { return base_t::value(); }
 };
 
 /**
@@ -431,12 +386,12 @@ class write_lock_guard : public read_lock_guard<T, Guard, Trait> {
     /**
      * @brief Mutable pointer-like access.
      */
-    auto operator->() -> value_type* { return &read_base::value(); }
+    auto operator->() -> value_type* { return &read_base::get(); }
 
     /**
      * @brief Mutable dereference.
      */
-    auto operator*() -> value_type& { return read_base::value(); }
+    auto operator*() -> value_type& { return read_base::get(); }
 
     /**
      * @brief Assignment operator for const value.
@@ -444,7 +399,7 @@ class write_lock_guard : public read_lock_guard<T, Guard, Trait> {
      * @return Reference to *this.
      */
     auto operator=(const value_type& rhs) -> write_lock_guard& {
-        read_base::value() = rhs;
+        read_base::get() = rhs;
         return *this;
     }
 
@@ -454,7 +409,7 @@ class write_lock_guard : public read_lock_guard<T, Guard, Trait> {
      * @return Reference to *this.
      */
     auto operator=(value_type&& rhs) -> write_lock_guard& {
-        read_base::value() = std::move(rhs);
+        read_base::get() = std::move(rhs);
         return *this;
     }
 };
@@ -625,6 +580,18 @@ class synchronized_value {
     }
 
     /**
+     * @brief Getter function for type T, providing thread-safe copy.
+     *
+     * Copies the guarded value under lock and returns it.
+     *
+     * @code
+     * synchronized_value<int> sv(42);
+     * int x = sv.get(); // x becomes 42 safely
+     * @endcode
+     */
+    auto get() -> T const { return operator*().get(); }
+
+    /**
      * @brief Conversion operator to type T, providing thread-safe copy.
      *
      * Copies the guarded value under lock and returns it.
@@ -634,7 +601,7 @@ class synchronized_value {
      * int x = static_cast<int>(sv); // x becomes 42 safely
      * @endcode
      */
-    operator T() const { return operator*(); }
+    operator T() const { return operator*().get(); }
 
     /**
      * @brief Obtains write lock guard by pointer access.
