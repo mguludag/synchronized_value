@@ -92,6 +92,7 @@ Example specialization for `std::filesystem::path` demonstrating custom comparis
 template <>
 class mgutility::thread::operators<std::filesystem::path> : std::reference_wrapper<std::filesystem::path> {
 public:
+    // this is mandatory for access value from guard objects
     using std::reference_wrapper<std::filesystem::path>::get;
 
     explicit operators(std::filesystem::path& p) noexcept
