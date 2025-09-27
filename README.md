@@ -17,7 +17,7 @@ A modern C++ thread-safe value wrapper with flexible locking strategies and conv
 - Compatible with **C++11** as a minimum.
 - If compiled with **C++17** or later, additional features such as `std::shared_mutex`, `std::shared_lock` are automatically enabled.
 
-## [Usage](https://godbolt.org/z/E147Tbx54)
+## [Usage](https://godbolt.org/z/nEKGff865)
 
 ```c++
 #include <mgutility/thread/synchronized_value.hpp>
@@ -90,15 +90,15 @@ Example specialization for `std::filesystem::path` demonstrating custom comparis
 #include <filesystem>
 
 template <>
-class mgutility::thread::operators<std::filesystem::path> : public ref_wrapper<std::filesystem::path> {
+class mgutility::thread::operators<std::filesystem::path> : std::reference_wrapper<std::filesystem::path> {
 public:
-    using ref_wrapper<std::filesystem::path>::value;
+    using std::reference_wrapper<std::filesystem::path>::get;
 
     explicit operators(std::filesystem::path& p) noexcept
-        : ref_wrapper<std::filesystem::path>(p) {}
+        : std::reference_wrapper<std::filesystem::path>(p) {}
 
     auto operator==(const std::filesystem::path& rhs) const -> bool {
-        return std::filesystem::equivalent(value(), rhs);
+        return std::filesystem::equivalent(get(), rhs);
     }
 
     auto operator!=(const std::filesystem::path& rhs) const -> bool {
@@ -106,16 +106,16 @@ public:
     }
 
     auto operator/(const std::filesystem::path& rhs) const -> std::filesystem::path {
-        return value() / rhs;
+        return get() / rhs;
     }
 
     auto operator/=(const std::filesystem::path& rhs) -> std::filesystem::path& {
-        return (value() /= rhs);
+        return (get() /= rhs);
     }
 
     friend auto operator<<(std::ostream& os, operators<std::filesystem::path>& val) -> std::ostream&
     {
-        return os << val.value();
+        return os << val.get();
     }
 };
 
