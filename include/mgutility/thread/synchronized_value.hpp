@@ -378,6 +378,13 @@ class read_lock_guard : public Guard, public operators<T> {
     MGUTILITY_NODISCARD auto operator*() const -> const const_value_type& {
         return base_t::value();
     }
+
+    /**
+     * @brief Conversion operator to type T, providing thread-safe copy.
+     *
+     * Copies the guarded value under lock and returns it.
+     */
+    operator T() const { return operator*(); }
 };
 
 /**
@@ -626,7 +633,7 @@ class synchronized_value {
      * int x = static_cast<int>(sv); // x becomes 42 safely
      * @endcode
      */
-    explicit operator T() const { return operator*(); }
+    operator T() const { return operator*(); }
 
     /**
      * @brief Obtains write lock guard by pointer access.
