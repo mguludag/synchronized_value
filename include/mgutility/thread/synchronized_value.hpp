@@ -557,7 +557,7 @@ class synchronized_value {
      */
     auto operator=(const synchronized_value& other) -> synchronized_value& {
         if (this != &other) {
-            operator=(other->get());
+            operator=(other.get());
         }
         return *this;
     }
