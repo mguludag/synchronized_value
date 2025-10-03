@@ -142,6 +142,9 @@ struct is_invocable<
 template <bool B, typename T = void>
 using enable_if_t = typename std::enable_if<B, T>::type;
 
+template <typename T>
+using remove_const_t = typename std::remove_const<T>::type;
+
 /**
  * @brief Deduce result type of invoking F with Args (cross-version).
  *
@@ -758,8 +761,9 @@ class synchronized_value {
  */
 template <typename... SV, typename Ret>
 MGUTILITY_NODISCARD auto synchronize(SV&... sv) -> Ret {
-    std::lock(sv.lockable()...);
-    return Ret{sv.synchronize(std::adopt_lock_t{})...};
+    std::lock(const_cast<detail::remove_const_t<SV>&>(sv).lockable()...);
+    return Ret{const_cast<detail::remove_const_t<SV>&>(sv).synchronize(
+        std::adopt_lock_t{})...};
 }
 
 }  // namespace thread
