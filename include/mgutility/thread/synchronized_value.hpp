@@ -557,8 +557,7 @@ class synchronized_value {
      */
     auto operator=(const synchronized_value& other) -> synchronized_value& {
         if (this != &other) {
-            auto&& guard = mgutility::thread::synchronize(*this, other);
-            *std::get<0>(guard) = *std::get<1>(guard);
+            operator*() = (*other).get();
         }
         return *this;
     }
