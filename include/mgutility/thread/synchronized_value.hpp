@@ -557,7 +557,7 @@ class synchronized_value {
      */
     auto operator=(const synchronized_value& other) -> synchronized_value& {
         if (this != &other) {
-            operator*() = (*other).get();
+            operator=(other->get());
         }
         return *this;
     }
@@ -578,6 +578,26 @@ class synchronized_value {
             auto&& guard = mgutility::thread::synchronize(*this, other);
             *std::get<0>(guard) = std::move(*std::get<1>(guard));
         }
+        return *this;
+    }
+
+    /**
+     * @brief Assigns a new value to the protected object.
+     * @param value New value.
+     * @return Reference to *this.
+     */
+    auto operator=(const T& value) -> synchronized_value& {
+        operator*() = value;
+        return *this;
+    }
+
+    /**
+     * @brief Assigns a new value to the protected object.
+     * @param value New value.
+     * @return Reference to *this.
+     */
+    auto operator=(T&& value) -> synchronized_value& {
+        operator*() = std::move(value);
         return *this;
     }
 
@@ -635,16 +655,6 @@ class synchronized_value {
      */
     MGUTILITY_NODISCARD auto operator*() -> write_lock_guard_t {
         return write_lock_guard_t{m_value, m_lockable};
-    }
-
-    /**
-     * @brief Assigns a new value to the protected object.
-     * @param value New value.
-     * @return Reference to *this.
-     */
-    auto operator=(const T& value) -> synchronized_value& {
-        operator*() = value;
-        return *this;
     }
 
     /**
